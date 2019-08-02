@@ -1,0 +1,1 @@
+cmd_drivers/misc/lbfeat-to-sysfs/lbfeat-to-sysfs.ko := arm-linux-gnueabihf-ld -EL -r  -T ./scripts/module-common.lds --build-id  -o drivers/misc/lbfeat-to-sysfs/lbfeat-to-sysfs.ko drivers/misc/lbfeat-to-sysfs/lbfeat-to-sysfs.o drivers/misc/lbfeat-to-sysfs/lbfeat-to-sysfs.mod.o ;  true
