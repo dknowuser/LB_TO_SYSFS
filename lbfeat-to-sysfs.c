@@ -1,14 +1,18 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
+#include <linux/regmap.h>
+
+
+#include <grif_fpga.h>
+//#include "drivers/fpga/stcmtk/grif/grif_fpga_mgr/grif_fpga.h"
 
 // Module device table
 static const struct of_device_id lb_sysfs_ids[] = {
-	{/* "lbfeat-to-sysfs"*/ .compatible = "lattice,ecp5-hwmon", },
+	{ .compatible = "stcmtk,lbfeat-to-sysfs", },
 	{ },
 };
 
-// TODO: figure out device name
 // Uncomment it to enable autoloading
 // MODULE_DEVICE_TABLE(of, lb_sysfs_ids);
 
@@ -33,7 +37,6 @@ static struct platform_driver lb_sysfs_driver = {
 	},
 	.probe = lb_sysfs_probe,
 	.remove = lb_sysfs_remove,
-	//.id_table = lb_sysfs_ids,
 };
 
 //------------------------------------------------------------------------------
