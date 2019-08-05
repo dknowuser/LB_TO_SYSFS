@@ -677,6 +677,22 @@ deps_drivers/misc/lbfeat-to-sysfs/lbfeat-to-sysfs.o := \
     $(wildcard include/config/arch/omap.h) \
   include/linux/pm_wakeup.h \
   include/linux/mod_devicetable.h \
+  include/linux/of.h \
+    $(wildcard include/config/sparc.h) \
+    $(wildcard include/config/of/dynamic.h) \
+    $(wildcard include/config/attach/node.h) \
+    $(wildcard include/config/detach/node.h) \
+    $(wildcard include/config/add/property.h) \
+    $(wildcard include/config/remove/property.h) \
+    $(wildcard include/config/update/property.h) \
+    $(wildcard include/config/of/numa.h) \
+    $(wildcard include/config/no/change.h) \
+    $(wildcard include/config/change/add.h) \
+    $(wildcard include/config/change/remove.h) \
+    $(wildcard include/config/of/resolve.h) \
+    $(wildcard include/config/of/overlay.h) \
+  include/linux/property.h \
+  include/linux/fwnode.h \
 
 drivers/misc/lbfeat-to-sysfs/lbfeat-to-sysfs.o: $(deps_drivers/misc/lbfeat-to-sysfs/lbfeat-to-sysfs.o)
 
