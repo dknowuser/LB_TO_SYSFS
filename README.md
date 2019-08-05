@@ -6,6 +6,6 @@ obj-y += lbfeat-to-sysfs/
 Device Tree bindings  
 The module requires lbfeat-to-sysfs subnode placed in /dts-v1/ node.  
 lbfeat-to-sysfs subnode fields are:  
-  * compatible = "lbfeat-to-sysfs"
+  * compatible = "stcmtk,lbfeat-to-sysfs"
   * target-fpga = <&fpga0>
   * label = "Smart Loopback management exporting into sysfs"
