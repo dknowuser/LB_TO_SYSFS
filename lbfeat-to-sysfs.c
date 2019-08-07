@@ -45,7 +45,6 @@ static struct device_attribute dev_attrib_lb_en, dev_attrib_mac_swap_en,
 // Callback section
 
 // Callbacks for reading and writing sysfs attributes
-
 // Callbacks for Smart LB Enable bit
 ssize_t show_lb_en(struct device *dev, struct device_attribute *attr,
 		char *buf)
@@ -172,7 +171,7 @@ static int lb_sysfs_probe(struct platform_device *pdev)
 	lb_sysfs_device = device_create(cl, NULL, MKDEV(MAJOR_DEV_NUMBER, 0), NULL, "lb" );
 	if(!cl) {
 		dev_info(&pdev->dev, "Failed to create \"Smart_LB\" class in /sys/class\n");
-		return -ENODEV;
+		return -EPERM;
 	};
 
 	add_attribute(lb_sysfs_device, "LB_BASE_CR_LB_EN", &dev_attrib_lb_en,
