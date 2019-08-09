@@ -6,9 +6,17 @@
 
 #include <grif_fpga.h>
 
-#define MAJOR_DEV_NUMBER 	14
-#define FPGA_FEATURE_LB_BASE_CR 85
-#define PARAMETER_LEN 		2
+#define MAJOR_DEV_NUMBER 		14
+#define FPGA_FEATURE_LB_BASE_CR 	85
+#define PARAMETER_LEN 			2
+
+#define LB_BASE_CR_LB_EN_BIT		0
+#define LB_BASE_CR_MAC_SWAP_EN_BIT	LB_BASE_CR_LB_EN_BIT + 1
+#define LB_BASE_CR_IP_SWAP_EN_BIT	LB_BASE_CR_MAC_SWAP_EN_BIT + 1
+#define LB_BASE_CR_TCP_UDP_SWAP_EN_BIT	LB_BASE_CR_IP_SWAP_EN_BIT + 1
+#define LB_BASE_CR_PASSTHROUGH_EN_BIT	LB_BASE_CR_TCP_UDP_SWAP_EN_BIT + 1
+#define LB_BASE_CR_PASSTHROUGH_MODE_BIT	LB_BASE_CR_PASSTHROUGH_EN_BIT + 1
+#define LB_BASE_CR_LB_L1_EN_BIT		LB_BASE_CR_PASSTHROUGH_MODE_BIT + 1
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -21,15 +29,9 @@ void add_attribute(struct device *dev, const char *attrib_name,
 		ssize_t (*store)(struct device *dev,
 		struct device_attribute *attr, const char *buf,
 		size_t count));
-//----------------------------------------------------------------------------
-// Structure declarations and definitions
 
-struct lb_base_sysfs {
-	//struct device *lb_base_sysfs_dev;
-	//struct platform_device *pdev;
-	struct regmap *regmap;
-	struct fpga_feature *lb_base_feat;
-};
+// Function for getting bit shift by sysfs attribute name
+unsigned get_shift_by_attrib_name(const char *attrib_name);
 
 //-----------------------------------------------------------------------------
 // Global variables section
@@ -56,7 +58,6 @@ static const char *LB_BASE_CR_LB_L1_EN_NAME 		= "LB_BASE_CR_LB_L1_EN";
 static struct device *lb_base_sysfs_device;
 static struct regmap *regmap = NULL;
 
-//static struct lb_base_sysfs *lb_base_sysfs_data;
 static struct class *cl;
 static struct attribute attrib;
 static struct device_attribute dev_attrib_lb_en, dev_attrib_mac_swap_en,
@@ -69,12 +70,12 @@ static struct device_attribute dev_attrib_lb_en, dev_attrib_mac_swap_en,
 
 // Callbacks for reading and writing sysfs attributes
 // Callbacks for Smart LB Enable bit
-ssize_t show_lb_en(struct device *dev, struct device_attribute *attr,
+ssize_t show_lb_base(struct device *dev, struct device_attribute *attr,
 		char *buf)
 {
 	int err;
 	unsigned data = 0;
-	unsigned shift = 0;
+	unsigned shift = get_shift_by_attrib_name(attr->attr.name);
 
 	err = regmap_read(regmap, FPGA_FEATURE_LB_BASE_CR, &data);
 	if(err) {
@@ -85,12 +86,12 @@ ssize_t show_lb_en(struct device *dev, struct device_attribute *attr,
 	return snprintf(buf, PAGE_SIZE, (data & ((unsigned)1 << shift))?"1\n":"0\n");
 };
 
-ssize_t store_lb_en(struct device *dev, struct device_attribute *attr,
+ssize_t store_lb_base(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t size)
 {
 	int err;
 	unsigned data = 0;
-	unsigned shift = 0;
+	unsigned shift = get_shift_by_attrib_name(attr->attr.name);
 
 	if(size != PARAMETER_LEN) {
 		dev_info(dev, "Invalid input parameter length (should be equal 1)\n");
@@ -124,97 +125,7 @@ ssize_t store_lb_en(struct device *dev, struct device_attribute *attr,
 	return size;
 };
 
-// Callbacks for Smart LB MAC Swap Enable bit
-ssize_t show_mac_swap_en(struct device *dev, struct device_attribute *attr,
-		char *buf)
-{
-	return 0;
-};
-
-ssize_t store_mac_swap_en(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size)
-{
-	return 0;
-};
-
-// Callbacks for Smart LB IP Swap Enable bit
-ssize_t show_ip_swap_en(struct device *dev, struct device_attribute *attr,
-		char *buf)
-{
-	return 0;
-};
-
-ssize_t store_ip_swap_en(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size)
-{
-	return 0;
-};
-
-// Callbacks for Smart LB TCP UDP Swap Enable bit
-ssize_t show_tcp_udp_swap_en(struct device *dev, struct device_attribute *attr,
-		char *buf)
-{
-	return 0;
-};
-
-ssize_t store_tcp_udp_swap_en(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size)
-{
-	return 0;
-};
-
-// Callbacks for Smart LB Passthrough Enable bit
-ssize_t show_passthrough_en(struct device *dev, struct device_attribute *attr,
-		char *buf)
-{
-	return 0;
-};
-
-ssize_t store_passthrough_en(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size)
-{
-	return 0;
-};
-
-// Callbacks for Smart LB Passthrough Mode bit
-ssize_t show_passthrough_mode(struct device *dev, struct device_attribute *attr,
-		char *buf)
-{
-	return 0;
-};
-
-ssize_t store_passthrough_mode(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size)
-{
-	return 0;
-};
-
-// Callbacks for Smart LB L1 Enable bit
-ssize_t show_lb_l1_en(struct device *dev, struct device_attribute *attr,
-		char *buf)
-{
-	return 0;
-};
-
-ssize_t store_lb_l1_en(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size)
-{
-	return 0;
-};
-
-static DEVICE_ATTR(LB_BASE_CR_LB_EN, S_IRUGO|S_IWUSR, show_lb_en, store_lb_en);
-static DEVICE_ATTR(LB_BASE_CR_MAC_SWAP_EN, S_IRUGO|S_IWUSR, show_mac_swap_en,
-		store_mac_swap_en);
-static DEVICE_ATTR(LB_BASE_CR_IP_SWAP_EN, S_IRUGO|S_IWUSR, show_ip_swap_en,
-		store_ip_swap_en);
-static DEVICE_ATTR(LB_BASE_CR_TCP_UDP_SWAP_EN, S_IRUGO|S_IWUSR,
-		show_tcp_udp_swap_en, store_tcp_udp_swap_en);
-static DEVICE_ATTR(LB_BASE_CR_PASSTHROUGH_EN, S_IRUGO|S_IWUSR,
-		show_passthrough_en, store_passthrough_en);
-static DEVICE_ATTR(LB_BASE_CR_PASSTHROUGH_MODE, S_IRUGO|S_IWUSR,
-		show_passthrough_mode, store_passthrough_mode);
-static DEVICE_ATTR(LB_BASE_CR_LB_L1_EN, S_IRUGO|S_IWUSR, show_lb_l1_en,
-		store_lb_l1_en);
+static DEVICE_ATTR(LB_BASE_CR, S_IRUGO|S_IWUSR, show_lb_base, store_lb_base);
 
 //-----------------------------------------------------------------------------
 
@@ -237,47 +148,6 @@ static int lb_base_sysfs_probe(struct platform_device *pdev)
 		return -EPROBE_DEFER;
 	};
 
-
-	/*lb_sysfs_data = dev_get_drvdata(&pdev->dev);
-	if(!lb_sysfs_data) {
-		dev_info(&pdev->dev, "FPGA is not presented\n");
-		return -ENODEV;
-	};*/
-
-	//struct lb_base_sysfs *lb_base_sysfs_data;
-	/*struct grif_fpga *fpga;
-	struct device_node *np = pdev->dev.of_node;
-
-	dev_info(&pdev->dev, "Smart LB to sysfs module probing procedure starts\n");
-	lb_base_sysfs_data = devm_kzalloc(&pdev->dev, sizeof(*lb_base_sysfs_data), GFP_KERNEL);
-	if(!lb_base_sysfs_data) {
-		dev_info(&pdev->dev, "Unable to allocate lb_base_sysfs data\n");
-		return -ENOMEM;
-	};
-
-	fpga = get_grif_fpga(np);
-	if(!fpga || IS_ERR_VALUE(fpga)) {
-		dev_info(&pdev->dev, "Couldn't get FPGA manager\n");
-		return -ENODEV;
-	};
-
-	lb_base_sysfs_data->regmap = dev_get_regmap(fpga->dev, NULL);
-	if(!lb_base_sysfs_data->regmap) {
-		dev_warn(&pdev->dev, "Couldn't access FPGA regmap. Deferring...\n");
-		put_grif_fpga(fpga);
-		return -EPROBE_DEFER;
-	};
-
-	lb_base_sysfs_data->lb_base_feat = grif_fpga_get_feature(fpga, FPGA_FEATURE_LB_BASE);
-	if(!lb_base_sysfs_data->lb_base_feat) {
-		dev_err(&pdev->dev, "Couldn't get LB_BASE feature\n");
-		put_grif_fpga(fpga);
-		return -ENODEV;
-	};*/
-
-	//lb_base_sysfs_data->lb_base_sysfs_dev = devm
-
-
 	cl = class_create(THIS_MODULE, LB_BASE_CLASS_NAME);
 	lb_base_sysfs_device = device_create(cl, NULL, MKDEV(MAJOR_DEV_NUMBER, 0), NULL, LB_BASE_DEVICE_NAME);
 	if(!cl) {
@@ -286,22 +156,22 @@ static int lb_base_sysfs_probe(struct platform_device *pdev)
 	};
 
 	add_attribute(lb_base_sysfs_device, LB_BASE_CR_LB_EN_NAME, &dev_attrib_lb_en,
-			show_lb_en, store_lb_en);
+			show_lb_base, store_lb_base);
 	add_attribute(lb_base_sysfs_device, LB_BASE_CR_MAC_SWAP_EN_NAME,
-			&dev_attrib_mac_swap_en, show_mac_swap_en, store_mac_swap_en);
+			&dev_attrib_mac_swap_en, show_lb_base, store_lb_base);
 	add_attribute(lb_base_sysfs_device, LB_BASE_CR_IP_SWAP_EN_NAME,
-			&dev_attrib_ip_swap_en, show_ip_swap_en, store_ip_swap_en);
+			&dev_attrib_ip_swap_en, show_lb_base, store_lb_base);
 	add_attribute(lb_base_sysfs_device, LB_BASE_CR_TCP_UDP_SWAP_EN_NAME,
-			&dev_attrib_tcp_udp_swap_en, show_tcp_udp_swap_en,
-			store_tcp_udp_swap_en);
+			&dev_attrib_tcp_udp_swap_en, show_lb_base,
+			store_lb_base);
 	add_attribute(lb_base_sysfs_device, LB_BASE_CR_PASSTHROUGH_EN_NAME,
-			&dev_attrib_passthrough_en, show_passthrough_en,
-			store_passthrough_en);
+			&dev_attrib_passthrough_en, show_lb_base,
+			store_lb_base);
 	add_attribute(lb_base_sysfs_device, LB_BASE_CR_PASSTHROUGH_MODE_NAME,
-			&dev_attrib_passthrough_mode, show_passthrough_mode,
-			store_passthrough_mode);
+			&dev_attrib_passthrough_mode, show_lb_base,
+			store_lb_base);
 	add_attribute(lb_base_sysfs_device, LB_BASE_CR_LB_L1_EN_NAME,
-			&dev_attrib_lb_l1_en, show_lb_l1_en, store_lb_l1_en);
+			&dev_attrib_lb_l1_en, show_lb_base, store_lb_base);
 
 	return 0;
 };
@@ -385,3 +255,25 @@ void add_attribute(struct device *dev, const char *attrib_name,
 		dev_info(dev, "Error creating file %s\n", attrib.name);
 };
 
+unsigned get_shift_by_attrib_name(const char *attrib_name)
+{
+	if(!strcmp(attrib_name, LB_BASE_CR_LB_EN_NAME))
+		return LB_BASE_CR_LB_EN_BIT;
+	else
+		if(!strcmp(attrib_name, LB_BASE_CR_MAC_SWAP_EN_NAME))
+			return LB_BASE_CR_MAC_SWAP_EN_BIT;
+		else
+			if(!strcmp(attrib_name, LB_BASE_CR_IP_SWAP_EN_NAME))
+				return LB_BASE_CR_IP_SWAP_EN_BIT;
+			else
+				if(!strcmp(attrib_name, LB_BASE_CR_TCP_UDP_SWAP_EN_NAME))
+					return LB_BASE_CR_TCP_UDP_SWAP_EN_BIT;
+				else
+					if(!strcmp(attrib_name, LB_BASE_CR_PASSTHROUGH_EN_NAME))
+						return LB_BASE_CR_PASSTHROUGH_EN_BIT;
+					else
+						if(!strcmp(attrib_name, LB_BASE_CR_PASSTHROUGH_MODE_NAME))
+							return LB_BASE_CR_PASSTHROUGH_MODE_BIT;
+						else
+							return LB_BASE_CR_LB_L1_EN_BIT;
+};
