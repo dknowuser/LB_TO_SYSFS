@@ -134,6 +134,7 @@ static DEVICE_ATTR(LB_BASE_CR, S_IRUGO|S_IWUSR, show_lb_base, store_lb_base);
 static int lb_base_sysfs_probe(struct platform_device *pdev)
 {
 	struct grif_fpga *g;
+	struct fpga_feature *lb_base_feat;
 
 	dev_info(&pdev->dev, "Smart LB to sysfs module probing procedure starts\n");
 	g = get_grif_fpga(pdev->dev.of_node);
@@ -146,6 +147,12 @@ static int lb_base_sysfs_probe(struct platform_device *pdev)
 	if(!regmap) {
 		dev_warn(&pdev->dev, "Couldn't access FPGA regmap\n");
 		return -EPROBE_DEFER;
+	};
+
+	lb_base_feat = grif_fpga_get_feature(g, FPGA_FEATURE_LB_BASE);
+	if(!lb_base_feat) {
+		dev_err(&pdev->dev, "Couldn't get LB_BASE feature\n");
+		return -ENODEV;
 	};
 
 	cl = class_create(THIS_MODULE, LB_BASE_CLASS_NAME);
