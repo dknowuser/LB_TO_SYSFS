@@ -19,6 +19,13 @@
 #define LB_BASE_CR_LB_L1_EN_BIT		LB_BASE_CR_PASSTHROUGH_MODE_BIT + 1
 
 //-----------------------------------------------------------------------------
+// Struct declarations
+struct drv_data {
+	struct device *dev;
+	uint32_t port_number;
+};
+
+//-----------------------------------------------------------------------------
 // Forward declarations
 
 // Function for adding sysfs attributes
@@ -45,8 +52,8 @@ static const struct of_device_id lb_base_sysfs_ids[] = {
 // Uncomment it to enable autoloading
 // MODULE_DEVICE_TABLE(of, lb_sysfs_ids);
 
-static const char *LB_BASE_CLASS_NAME			= "smart_lb";
-static const char *LB_BASE_DEVICE_NAME			= "lb_";
+static const char *LB_BASE_CLASS_NAME			= "lb_base_feat_to_sysfs";
+static const char *LB_BASE_DEVICE_NAME			= "lb_base_feat_to_sysfs_0";
 static const char *LB_BASE_CR_LB_EN_NAME 		= "LB_BASE_CR_LB_EN";
 static const char *LB_BASE_CR_MAC_SWAP_EN_NAME 		= "LB_BASE_CR_MAC_SWAP_EN";
 static const char *LB_BASE_CR_IP_SWAP_EN_NAME 		= "LB_BASE_CR_IP_SWAP_EN";
@@ -76,26 +83,16 @@ ssize_t show_lb_base(struct device *dev, struct device_attribute *attr,
 {
 	int err;
 	unsigned data = 0;
-	uint32_t port_number;
 	uint16_t cr_offset;
 	unsigned shift = get_shift_by_attrib_name(attr->attr.name);
+	struct drv_data *lb_base_drv_data = dev_get_drvdata(dev);
+	if(!lb_base_drv_data) {
+		dev_err(dev, "Unable to get driver data\n");
+		return snprintf(buf, PAGE_SIZE, "Unable to get driver data\n");
+	};
 
-	/*err = device_property_read_u32(lb_base_sysfs_device, "PORT", &port_number);
-	if(err) {
-		dev_err(dev, "Error reading LB_BASE feature port property from Device Tree\n");
-		return snprintf(buf, PAGE_SIZE, "Error reading LB_BASE feature port property from Device Tree\n");
-	};*/
-
-	//of_property_read_u32(dev->of_node, "port", &port_number);
-	
-	//const char *label = of_get_property(dev->of_node, "label", NULL);
-	//if(label)
-	if(dev->of_node)
-		return snprintf(buf, PAGE_SIZE, dev->init_name);
-
-
-	cr_offset = grif_fpga_feature_cr_base_on_port(lb_base_feat, port_number);
-	dev_info(dev, "port_number = %d cr_offset = %d\n", port_number, cr_offset);
+	cr_offset = grif_fpga_feature_cr_base_on_port(lb_base_feat, lb_base_drv_data->port_number);
+	dev_info(dev, "port_number = %d cr_offset = %d\n", lb_base_drv_data->port_number, cr_offset);
 
 	err = regmap_read(regmap, cr_offset, &data);
 	if(err) {
@@ -111,7 +108,13 @@ ssize_t store_lb_base(struct device *dev, struct device_attribute *attr,
 {
 	int err;
 	unsigned data = 0;
+	uint16_t cr_offset;
 	unsigned shift = get_shift_by_attrib_name(attr->attr.name);
+	struct drv_data *lb_base_drv_data = dev_get_drvdata(dev);
+	if(!lb_base_drv_data) {
+		dev_err(dev, "Unable to get driver data\n");
+		return snprintf(buf, PAGE_SIZE, "Unable to get driver data\n");
+	};
 
 	if(size != PARAMETER_LEN) {
 		dev_info(dev, "Invalid input parameter length (should be equal 1)\n");
@@ -123,7 +126,10 @@ ssize_t store_lb_base(struct device *dev, struct device_attribute *attr,
 		return EINVAL;
 	};
 
-	err = regmap_read(regmap, FPGA_FEATURE_LB_BASE_CR, &data);
+	cr_offset = grif_fpga_feature_cr_base_on_port(lb_base_feat, lb_base_drv_data->port_number);
+	dev_info(dev, "port_number = %d cr_offset = %d\n", lb_base_drv_data->port_number, cr_offset);
+
+	err = regmap_read(regmap, cr_offset, &data);
 	if(err) {
 		dev_err(dev, "Error reading LB_BASE feature control register\n");
 		return EIO;
@@ -136,7 +142,7 @@ ssize_t store_lb_base(struct device *dev, struct device_attribute *attr,
 		data &= ~((unsigned)1 << shift);
 	};
 
-	err = regmap_write(regmap, FPGA_FEATURE_LB_BASE_CR, data);
+	err = regmap_write(regmap, cr_offset, data);
 	if(err) {
 		dev_err(dev, "Error writing LB_BASE feature control register\n");
 		return EIO;
@@ -145,7 +151,7 @@ ssize_t store_lb_base(struct device *dev, struct device_attribute *attr,
 	return size;
 };
 
-static DEVICE_ATTR(LB_BASE_CR_LB_EN, S_IRUGO|S_IWUSR, show_lb_base, store_lb_base);
+static DEVICE_ATTR(lb_base_feat_to_sysfs, S_IRUGO|S_IWUSR, show_lb_base, store_lb_base);
 
 //-----------------------------------------------------------------------------
 
@@ -154,9 +160,8 @@ static DEVICE_ATTR(LB_BASE_CR_LB_EN, S_IRUGO|S_IWUSR, show_lb_base, store_lb_bas
 static int lb_base_sysfs_probe(struct platform_device *pdev)
 {
 	struct grif_fpga *g;
-	//struct fpga_feature *lb_base_feat;
 	uint32_t port_number;
-	//char dev_name[5];
+	struct drv_data *lb_base_drv_data;
 
 	dev_info(&pdev->dev, "Smart LB to sysfs module probing procedure starts\n");
 	g = get_grif_fpga(pdev->dev.of_node);
@@ -189,8 +194,16 @@ static int lb_base_sysfs_probe(struct platform_device *pdev)
 		return -ENODEV;
 	};
 
+	lb_base_drv_data = devm_kzalloc(&pdev->dev, sizeof(*lb_base_drv_data), GFP_KERNEL);
+	if(!lb_base_drv_data) {
+		dev_err(&pdev->dev, "Unable to allocate memory for driver data\n", port_number);
+		return -ENOMEM;
+	};
+	lb_base_drv_data->dev = &pdev->dev;
+	platform_set_drvdata(pdev, lb_base_drv_data);
+
 	cl = class_create(THIS_MODULE, LB_BASE_CLASS_NAME);
-	lb_base_sysfs_device = device_create(cl, NULL, MKDEV(MAJOR_DEV_NUMBER, 0), NULL, LB_BASE_DEVICE_NAME);
+	lb_base_sysfs_device = device_create(cl, NULL, MKDEV(MAJOR_DEV_NUMBER, 0), lb_base_drv_data, LB_BASE_DEVICE_NAME);
 	if(!cl) {
 		dev_info(&pdev->dev, "Failed to create \"Smart_LB\" class in /sys/class\n");
 		return -EPERM;
@@ -238,7 +251,7 @@ static int lb_base_sysfs_remove(struct platform_device *pdev)
 // Module driver structure
 static struct platform_driver lb_base_sysfs_driver = {
 	.driver = {
-		.name = "lbfeat-to-sysfs",
+		.name = "lb_base_feat_to_sysfs",
 		.of_match_table = of_match_ptr(lb_base_sysfs_ids),
 	},
 	.probe = lb_base_sysfs_probe,
