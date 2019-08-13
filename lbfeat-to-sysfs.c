@@ -93,7 +93,7 @@ ssize_t show_lb_base(struct device *dev, struct device_attribute *attr,
 	};
 
 	cr_offset = grif_fpga_feature_cr_base_on_port(lb_base_feat, lb_base_drv_data->port_number);
-	dev_info(dev, "port_number = %d cr_offset = %d\n", lb_base_drv_data->port_number, cr_offset);
+	//dev_info(dev, "port_number = %d cr_offset = %d\n", lb_base_drv_data->port_number, cr_offset);
 
 	err = regmap_read(regmap, cr_offset, &data);
 	if(err) {
@@ -128,7 +128,7 @@ ssize_t store_lb_base(struct device *dev, struct device_attribute *attr,
 	};
 
 	cr_offset = grif_fpga_feature_cr_base_on_port(lb_base_feat, lb_base_drv_data->port_number);
-	dev_info(dev, "port_number = %d cr_offset = %d\n", lb_base_drv_data->port_number, cr_offset);
+	//dev_info(dev, "port_number = %d cr_offset = %d\n", lb_base_drv_data->port_number, cr_offset);
 
 	err = regmap_read(regmap, cr_offset, &data);
 	if(err) {
@@ -337,7 +337,6 @@ void add_attribute(struct device *dev, const char *attrib_name,
 	dev_attrib->show = show;
 	dev_attrib->store = store;
 	err = device_create_file(dev, dev_attrib);
-	dev_info(dev, "dev->driver_data->port_number =  %d\n", ((struct drv_data*)dev->driver_data)->port_number);
 	if(err < 0)
 		dev_info(dev, "Error creating file %s\n", attrib.name);
 };
