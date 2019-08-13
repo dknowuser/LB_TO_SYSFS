@@ -62,9 +62,10 @@ static const char *LB_BASE_CR_PASSTHROUGH_EN_NAME 	= "LB_BASE_CR_PASSTHROUGH_EN"
 static const char *LB_BASE_CR_PASSTHROUGH_MODE_NAME 	= "LB_BASE_CR_PASSTHROUGH_MODE";
 static const char *LB_BASE_CR_LB_L1_EN_NAME 		= "LB_BASE_CR_LB_L1_EN";
 
-static struct device *lb_base_sysfs_device_0 = NULL, *lb_base_sysfs_device_1 = NULL;
 static struct regmap *regmap = NULL;
 static struct fpga_feature *lb_base_feat = NULL;
+
+static struct device *lb_base_sysfs_device_0 = NULL, *lb_base_sysfs_device_1 = NULL;
 
 static struct class *cl = NULL;
 static struct attribute attrib;
@@ -252,32 +253,30 @@ static int lb_base_sysfs_probe(struct platform_device *pdev)
 // Function for unplugging Smart Loopback FPGA feature from sysfs
 static int lb_base_sysfs_remove(struct platform_device *pdev)
 {
-	if(lb_base_sysfs_device_0) {
-		device_remove_file(lb_base_sysfs_device_0, &dev_attrib_lb_l1_en);
-		device_remove_file(lb_base_sysfs_device_0, &dev_attrib_passthrough_mode);
-		device_remove_file(lb_base_sysfs_device_0, &dev_attrib_passthrough_en);
-		device_remove_file(lb_base_sysfs_device_0, &dev_attrib_tcp_udp_swap_en);
-		device_remove_file(lb_base_sysfs_device_0, &dev_attrib_ip_swap_en);
-		device_remove_file(lb_base_sysfs_device_0, &dev_attrib_mac_swap_en);
-		device_remove_file(lb_base_sysfs_device_0, &dev_attrib_lb_en);
+	struct drv_data *lb_base_drv_data = dev_get_drvdata(&pdev->dev);
 
-		device_destroy(cl, MKDEV(MAJOR_DEV_NUMBER, 0));
+	device_remove_file(&pdev->dev, &dev_attrib_lb_l1_en);
+	device_remove_file(&pdev->dev, &dev_attrib_passthrough_mode);
+	device_remove_file(&pdev->dev, &dev_attrib_passthrough_en);
+	device_remove_file(&pdev->dev, &dev_attrib_tcp_udp_swap_en);
+	device_remove_file(&pdev->dev, &dev_attrib_ip_swap_en);
+	device_remove_file(&pdev->dev, &dev_attrib_mac_swap_en);
+	device_remove_file(&pdev->dev, &dev_attrib_lb_en);
+
+	device_destroy(cl, MKDEV(MAJOR_DEV_NUMBER, lb_base_drv_data->port_number));
+
+	if(!lb_base_drv_data->port_number) {
+		lb_base_sysfs_device_0 = NULL;
+		if(!lb_base_sysfs_device_1)
+			class_destroy(cl);
 	}
+	else {
+		lb_base_sysfs_device_1 = NULL;
+		if(!lb_base_sysfs_device_0)
+			class_destroy(cl);
+	};
 
-	if(lb_base_sysfs_device_1) {
-		device_remove_file(lb_base_sysfs_device_1, &dev_attrib_lb_l1_en);
-		device_remove_file(lb_base_sysfs_device_1, &dev_attrib_passthrough_mode);
-		device_remove_file(lb_base_sysfs_device_1, &dev_attrib_passthrough_en);
-		device_remove_file(lb_base_sysfs_device_1, &dev_attrib_tcp_udp_swap_en);
-		device_remove_file(lb_base_sysfs_device_1, &dev_attrib_ip_swap_en);
-		device_remove_file(lb_base_sysfs_device_1, &dev_attrib_mac_swap_en);
-		device_remove_file(lb_base_sysfs_device_1, &dev_attrib_lb_en);
-
-		device_destroy(cl, MKDEV(MAJOR_DEV_NUMBER, 1));
-	}
-	class_destroy(cl);
-
-	dev_info(&pdev->dev, "Smart LB to sysfs module has been removed\n");
+	dev_info(&pdev->dev, "Smart LB device has been removed\n");
 	return 0;
 };
 
