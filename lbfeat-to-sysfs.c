@@ -45,15 +45,15 @@ unsigned get_shift_by_attrib_name(const char *attrib_name);
 
 // Module device table
 static const struct of_device_id lb_base_sysfs_ids[] = {
-	{ .compatible = "stcmtk,lbfeat-to-sysfs-0", },
+	{ .compatible = "stcmtk,lb-base-feat-to-sysfs", },
 	{ },
 };
 
 // Uncomment it to enable autoloading
 // MODULE_DEVICE_TABLE(of, lb_sysfs_ids);
 
-static const char *LB_BASE_CLASS_NAME			= "lb_base_feat_to_sysfs";
-static const char *LB_BASE_DEVICE_NAME			= "lb_base_feat_to_sysfs_0";
+static const char *LB_BASE_CLASS_NAME			= "smart_lb";
+static const char *LB_BASE_DEVICE_NAME			= "lb_%d";
 static const char *LB_BASE_CR_LB_EN_NAME 		= "LB_BASE_CR_LB_EN";
 static const char *LB_BASE_CR_MAC_SWAP_EN_NAME 		= "LB_BASE_CR_MAC_SWAP_EN";
 static const char *LB_BASE_CR_IP_SWAP_EN_NAME 		= "LB_BASE_CR_IP_SWAP_EN";
@@ -62,11 +62,11 @@ static const char *LB_BASE_CR_PASSTHROUGH_EN_NAME 	= "LB_BASE_CR_PASSTHROUGH_EN"
 static const char *LB_BASE_CR_PASSTHROUGH_MODE_NAME 	= "LB_BASE_CR_PASSTHROUGH_MODE";
 static const char *LB_BASE_CR_LB_L1_EN_NAME 		= "LB_BASE_CR_LB_L1_EN";
 
-static struct device *lb_base_sysfs_device;
+static struct device *lb_base_sysfs_device_0 = NULL, *lb_base_sysfs_device_1 = NULL;
 static struct regmap *regmap = NULL;
-static struct fpga_feature *lb_base_feat;
+static struct fpga_feature *lb_base_feat = NULL;
 
-static struct class *cl;
+static struct class *cl = NULL;
 static struct attribute attrib;
 static struct device_attribute dev_attrib_lb_en, dev_attrib_mac_swap_en,
 			       dev_attrib_ip_swap_en, dev_attrib_tcp_udp_swap_en,
@@ -162,24 +162,29 @@ static int lb_base_sysfs_probe(struct platform_device *pdev)
 	struct grif_fpga *g;
 	uint32_t port_number;
 	struct drv_data *lb_base_drv_data;
+	char sysfs_dev_name[5];
+	struct device *lb_base_sysfs_device;
 
 	dev_info(&pdev->dev, "Smart LB to sysfs module probing procedure starts\n");
-	g = get_grif_fpga(pdev->dev.of_node);
-	if(!g) {
-		dev_info(&pdev->dev, "FPGA is not presented\n");
-		return -ENODEV;
-	};
 
-	regmap = g->regmap;
-	if(!regmap) {
-		dev_warn(&pdev->dev, "Couldn't access FPGA regmap\n");
-		return -EPROBE_DEFER;
-	};
+	if(!regmap || !lb_base_feat) {
+		g = get_grif_fpga(pdev->dev.of_node);
+		if(!g) {
+			dev_info(&pdev->dev, "FPGA is not presented\n");
+			return -ENODEV;
+		};
 
-	lb_base_feat = grif_fpga_get_feature(g, FPGA_FEATURE_LB_BASE);
-	if(!lb_base_feat) {
-		dev_err(&pdev->dev, "Couldn't get LB_BASE feature\n");
-		return -ENODEV;
+		regmap = g->regmap;
+		if(!regmap) {
+			dev_warn(&pdev->dev, "Couldn't access FPGA regmap\n");
+			return -EPROBE_DEFER;
+		};
+
+		lb_base_feat = grif_fpga_get_feature(g, FPGA_FEATURE_LB_BASE);
+		if(!lb_base_feat) {
+			dev_err(&pdev->dev, "Couldn't get LB_BASE feature\n");
+			return -ENODEV;
+		};
 	};
 
 	if(!of_find_property(pdev->dev.of_node, "port", NULL)) {
@@ -200,14 +205,28 @@ static int lb_base_sysfs_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	};
 	lb_base_drv_data->dev = &pdev->dev;
+	lb_base_drv_data->port_number = port_number;
 	platform_set_drvdata(pdev, lb_base_drv_data);
 
-	cl = class_create(THIS_MODULE, LB_BASE_CLASS_NAME);
-	lb_base_sysfs_device = device_create(cl, NULL, MKDEV(MAJOR_DEV_NUMBER, 0), lb_base_drv_data, LB_BASE_DEVICE_NAME);
+	if(!cl)
+		cl = class_create(THIS_MODULE, LB_BASE_CLASS_NAME);
 	if(!cl) {
-		dev_info(&pdev->dev, "Failed to create \"Smart_LB\" class in /sys/class\n");
+		dev_info(&pdev->dev, "Failed to create '%s' class in /sys/class\n", LB_BASE_CLASS_NAME);
 		return -EPERM;
 	};
+
+
+	sprintf(sysfs_dev_name, LB_BASE_DEVICE_NAME, port_number);
+	lb_base_sysfs_device = device_create(cl, NULL, MKDEV(MAJOR_DEV_NUMBER, port_number), lb_base_drv_data, sysfs_dev_name);
+	if(!lb_base_sysfs_device) {
+		dev_info(&pdev->dev, "Failed to create '%s' device in /sys/class/%s\n", sysfs_dev_name, LB_BASE_CLASS_NAME);
+		return -EPERM;
+	};
+
+	if(!port_number)
+		lb_base_sysfs_device_0 = lb_base_sysfs_device;
+	else
+		lb_base_sysfs_device_1 = lb_base_sysfs_device;
 
 	add_attribute(lb_base_sysfs_device, LB_BASE_CR_LB_EN_NAME, &dev_attrib_lb_en,
 			show_lb_base, store_lb_base);
@@ -233,15 +252,29 @@ static int lb_base_sysfs_probe(struct platform_device *pdev)
 // Function for unplugging Smart Loopback FPGA feature from sysfs
 static int lb_base_sysfs_remove(struct platform_device *pdev)
 {
-	device_remove_file(lb_base_sysfs_device, &dev_attrib_lb_l1_en);
-	device_remove_file(lb_base_sysfs_device, &dev_attrib_passthrough_mode);
-	device_remove_file(lb_base_sysfs_device, &dev_attrib_passthrough_en);
-	device_remove_file(lb_base_sysfs_device, &dev_attrib_tcp_udp_swap_en);
-	device_remove_file(lb_base_sysfs_device, &dev_attrib_ip_swap_en);
-	device_remove_file(lb_base_sysfs_device, &dev_attrib_mac_swap_en);
-	device_remove_file(lb_base_sysfs_device, &dev_attrib_lb_en);
+	if(lb_base_sysfs_device_0) {
+		device_remove_file(lb_base_sysfs_device_0, &dev_attrib_lb_l1_en);
+		device_remove_file(lb_base_sysfs_device_0, &dev_attrib_passthrough_mode);
+		device_remove_file(lb_base_sysfs_device_0, &dev_attrib_passthrough_en);
+		device_remove_file(lb_base_sysfs_device_0, &dev_attrib_tcp_udp_swap_en);
+		device_remove_file(lb_base_sysfs_device_0, &dev_attrib_ip_swap_en);
+		device_remove_file(lb_base_sysfs_device_0, &dev_attrib_mac_swap_en);
+		device_remove_file(lb_base_sysfs_device_0, &dev_attrib_lb_en);
 
-	device_destroy(cl, MKDEV(MAJOR_DEV_NUMBER, 0));
+		device_destroy(cl, MKDEV(MAJOR_DEV_NUMBER, 0));
+	}
+
+	if(lb_base_sysfs_device_1) {
+		device_remove_file(lb_base_sysfs_device_1, &dev_attrib_lb_l1_en);
+		device_remove_file(lb_base_sysfs_device_1, &dev_attrib_passthrough_mode);
+		device_remove_file(lb_base_sysfs_device_1, &dev_attrib_passthrough_en);
+		device_remove_file(lb_base_sysfs_device_1, &dev_attrib_tcp_udp_swap_en);
+		device_remove_file(lb_base_sysfs_device_1, &dev_attrib_ip_swap_en);
+		device_remove_file(lb_base_sysfs_device_1, &dev_attrib_mac_swap_en);
+		device_remove_file(lb_base_sysfs_device_1, &dev_attrib_lb_en);
+
+		device_destroy(cl, MKDEV(MAJOR_DEV_NUMBER, 1));
+	}
 	class_destroy(cl);
 
 	dev_info(&pdev->dev, "Smart LB to sysfs module has been removed\n");
@@ -305,6 +338,7 @@ void add_attribute(struct device *dev, const char *attrib_name,
 	dev_attrib->show = show;
 	dev_attrib->store = store;
 	err = device_create_file(dev, dev_attrib);
+	dev_info(dev, "dev->driver_data->port_number =  %d\n", ((struct drv_data*)dev->driver_data)->port_number);
 	if(err < 0)
 		dev_info(dev, "Error creating file %s\n", attrib.name);
 };
