@@ -166,7 +166,7 @@ static int lb_base_sysfs_probe(struct platform_device *pdev)
 	char sysfs_dev_name[5];
 	struct device *lb_base_sysfs_device;
 
-	dev_info(&pdev->dev, "Smart LB to sysfs module probing procedure starts\n");
+	dev_info(&pdev->dev, "Smart LB to sysfs device probing procedure starts\n");
 
 	if(!regmap || !lb_base_feat) {
 		g = get_grif_fpga(pdev->dev.of_node);
@@ -265,6 +265,7 @@ static int lb_base_sysfs_remove(struct platform_device *pdev)
 
 	device_destroy(cl, MKDEV(MAJOR_DEV_NUMBER, lb_base_drv_data->port_number));
 
+	// TODO: Find out another way to recognize Smart Loopback devices that not destroyed
 	if(!lb_base_drv_data->port_number) {
 		lb_base_sysfs_device_0 = NULL;
 		if(!lb_base_sysfs_device_1)
