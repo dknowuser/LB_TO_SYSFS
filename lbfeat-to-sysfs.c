@@ -17,8 +17,8 @@
 #define LB_BASE_CR_PASSTHROUGH_MODE_BIT	LB_BASE_CR_PASSTHROUGH_EN_BIT + 1
 #define LB_BASE_CR_LB_L1_EN_BIT		LB_BASE_CR_PASSTHROUGH_MODE_BIT + 1
 
-#define L1 (1 << LB_BASE_CR_LB_EN_BIT)
-#define L2 L1 | (1 << LB_BASE_CR_MAC_SWAP_EN_BIT)
+//#define L1 (1 << LB_BASE_CR_LB_L1_EN_BIT)
+#define L2 /*L1 |*/ (1 << LB_BASE_CR_MAC_SWAP_EN_BIT)
 #define L3 L2 | (1 << LB_BASE_CR_IP_SWAP_EN_BIT)
 #define L4 L3 | (1 << LB_BASE_CR_TCP_UDP_SWAP_EN_BIT)
 
@@ -128,12 +128,12 @@ ssize_t store_lb_base_en(struct device *dev, struct device_attribute *attr,
 	};
 
 	if(*buf == '1') {
-		data |= ((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
+		//data |= ((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
 		data |= ((unsigned)1 << LB_BASE_CR_LB_EN_BIT);
 	}
 	else {
 		data &= ~((unsigned)1 << LB_BASE_CR_LB_EN_BIT);
-		data &= ~((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
+		//data &= ~((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
 	};
 
 	err = regmap_write(regmap, cr_offset, data);
@@ -165,12 +165,14 @@ ssize_t show_lb_base_lvl(struct device *dev, struct device_attribute *attr,
 		return snprintf(buf, PAGE_SIZE, "Error reading LB_BASE feature control register\n");
 	};
 
-	if(!(data & ((unsigned)1 << LB_BASE_CR_LB_EN_BIT)))
+	if(!(data & ((unsigned)1 << LB_BASE_CR_MAC_SWAP_EN_BIT
+		| (unsigned)1 << LB_BASE_CR_IP_SWAP_EN_BIT
+		| (unsigned)1 << LB_BASE_CR_TCP_UDP_SWAP_EN_BIT)))
 		return snprintf(buf, PAGE_SIZE, "0\n");
 
 	switch(data & 0xF) {
-	case L1:
-		return snprintf(buf, PAGE_SIZE, "1\n");
+	/*case L1:
+		return snprintf(buf, PAGE_SIZE, "1\n");*/
 	case L2:
 		return snprintf(buf, PAGE_SIZE, "2\n");
 	case L3:
@@ -185,7 +187,66 @@ ssize_t show_lb_base_lvl(struct device *dev, struct device_attribute *attr,
 ssize_t store_lb_base_lvl(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t size)
 {
+	int err;
+	uint16_t cr_offset;
+	unsigned data = 0;
+	struct drv_data *lb_base_drv_data = dev_get_drvdata(dev);
+	if(!lb_base_drv_data) {
+		dev_err(dev, "Unable to get driver data\n");
+		return snprintf(buf, PAGE_SIZE, "Unable to get driver data\n");
+	};
 
+	if(size != PARAMETER_LEN) {
+		dev_info(dev, "Invalid input parameter length (should be equal 1)\n");
+		return EINVAL;
+	};
+
+	if((*buf != '0') && /*(*buf != '1') && */(*buf != '2') && (*buf != '3') && (*buf != '4')) {
+		dev_info(dev, "Invalid input parameter value (should be equal '0', '2'..'4')\n");
+		return EINVAL;
+	};
+
+	cr_offset = grif_fpga_feature_cr_base_on_port(lb_base_feat, lb_base_drv_data->port_number);
+
+	err = regmap_read(regmap, cr_offset, &data);
+	if(err) {
+		dev_err(dev, "Error reading LB_BASE feature control register\n");
+		return EIO;
+	};
+
+	data &= 0xF1;
+
+	switch(*buf) {
+	case '0':
+		//data &= ~((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
+		break;
+	/*case '1':
+		data |= ((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
+		break;*/
+	case '2':
+		data |= ((unsigned)1 << LB_BASE_CR_MAC_SWAP_EN_BIT);
+		//data |= ((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
+		break;
+	case '3':
+		data |= ((unsigned)1 << LB_BASE_CR_MAC_SWAP_EN_BIT);
+		data |= ((unsigned)1 << LB_BASE_CR_IP_SWAP_EN_BIT);
+		//data |= ((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
+		break;
+	case '4':
+		data |= ((unsigned)1 << LB_BASE_CR_MAC_SWAP_EN_BIT);
+		data |= ((unsigned)1 << LB_BASE_CR_IP_SWAP_EN_BIT);
+		data |= ((unsigned)1 << LB_BASE_CR_TCP_UDP_SWAP_EN_BIT);
+		//data |= ((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
+		break;
+	};
+
+	err = regmap_write(regmap, cr_offset, data);
+	if(err) {
+		dev_err(dev, "Error writing LB_BASE feature control register\n");
+		return EIO;
+	};
+
+	return size;
 };
 
 static DEVICE_ATTR(lb_base_feat_to_sysfs_en, S_IRUGO|S_IWUSR, show_lb_base_en, store_lb_base_en);
