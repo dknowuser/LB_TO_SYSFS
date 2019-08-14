@@ -18,6 +18,7 @@
 #define LB_BASE_CR_LB_L1_EN_BIT		LB_BASE_CR_PASSTHROUGH_MODE_BIT + 1
 
 //#define L1 (1 << LB_BASE_CR_LB_L1_EN_BIT)
+#define L0 0
 #define L2 /*L1 |*/ (1 << LB_BASE_CR_MAC_SWAP_EN_BIT)
 #define L3 L2 | (1 << LB_BASE_CR_IP_SWAP_EN_BIT)
 #define L4 L3 | (1 << LB_BASE_CR_TCP_UDP_SWAP_EN_BIT)
@@ -165,12 +166,9 @@ ssize_t show_lb_base_lvl(struct device *dev, struct device_attribute *attr,
 		return snprintf(buf, PAGE_SIZE, "Error reading LB_BASE feature control register\n");
 	};
 
-	if(!(data & ((unsigned)1 << LB_BASE_CR_MAC_SWAP_EN_BIT
-		| (unsigned)1 << LB_BASE_CR_IP_SWAP_EN_BIT
-		| (unsigned)1 << LB_BASE_CR_TCP_UDP_SWAP_EN_BIT)))
+	switch(data & 0xE) {
+	case L0:
 		return snprintf(buf, PAGE_SIZE, "0\n");
-
-	switch(data & 0xF) {
 	/*case L1:
 		return snprintf(buf, PAGE_SIZE, "1\n");*/
 	case L2:
