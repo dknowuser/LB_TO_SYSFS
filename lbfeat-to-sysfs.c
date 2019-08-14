@@ -37,7 +37,7 @@ void add_attribute(struct device *dev, const char *attrib_name,
 		size_t count));
 
 // Function for getting bit shift by sysfs attribute name
-unsigned get_shift_by_attrib_name(const char *attrib_name);
+//unsigned get_shift_by_attrib_name(const char *attrib_name);
 
 //-----------------------------------------------------------------------------
 // Global variables section
@@ -55,13 +55,8 @@ static uint32_t device_mask = 0;
 
 static const char *LB_BASE_CLASS_NAME			= "smart_lb";
 static const char *LB_BASE_DEVICE_NAME			= "lb_%d";
-static const char *LB_BASE_CR_LB_EN_NAME 		= "LB_BASE_CR_LB_EN";
-static const char *LB_BASE_CR_MAC_SWAP_EN_NAME 		= "LB_BASE_CR_MAC_SWAP_EN";
-static const char *LB_BASE_CR_IP_SWAP_EN_NAME 		= "LB_BASE_CR_IP_SWAP_EN";
-static const char *LB_BASE_CR_TCP_UDP_SWAP_EN_NAME 	= "LB_BASE_CR_TCP_UDP_SWAP_EN";
-static const char *LB_BASE_CR_PASSTHROUGH_EN_NAME 	= "LB_BASE_CR_PASSTHROUGH_EN";
-static const char *LB_BASE_CR_PASSTHROUGH_MODE_NAME 	= "LB_BASE_CR_PASSTHROUGH_MODE";
-static const char *LB_BASE_CR_LB_L1_EN_NAME 		= "LB_BASE_CR_LB_L1_EN";
+static const char *LB_BASE_ENABLE_NAME	 		= "enable";
+static const char *LB_BASE_LEVEL_NAME	 		= "level";
 
 static struct regmap *regmap = NULL;
 static struct fpga_feature *lb_base_feat = NULL;
@@ -70,31 +65,25 @@ static struct device *lb_base_sysfs_device_0 = NULL, *lb_base_sysfs_device_1 = N
 
 static struct class *cl = NULL;
 static struct attribute attrib;
-static struct device_attribute dev_attrib_lb_en, dev_attrib_mac_swap_en,
-			       dev_attrib_ip_swap_en, dev_attrib_tcp_udp_swap_en,
-			       dev_attrib_passthrough_en, dev_attrib_passthrough_mode,
-			       dev_attrib_lb_l1_en;
+static struct device_attribute dev_attrib_enable, dev_attrib_level;
 
 //-----------------------------------------------------------------------------
 // Callback section
 
 // Callbacks for reading and writing sysfs attributes
-// Callbacks for Smart LB Enable bit
-ssize_t show_lb_base(struct device *dev, struct device_attribute *attr,
+// Callbacks for Smart LB Enable
+ssize_t show_lb_base_en(struct device *dev, struct device_attribute *attr,
 		char *buf)
 {
-	/*int err;
-	unsigned data = 0;
+	int err;
 	uint16_t cr_offset;
-	unsigned shift = get_shift_by_attrib_name(attr->attr.name);
+	unsigned data = 0;
 	struct drv_data *lb_base_drv_data = dev_get_drvdata(dev);
 	if(!lb_base_drv_data) {
 		dev_err(dev, "Unable to get driver data\n");
 		return snprintf(buf, PAGE_SIZE, "Unable to get driver data\n");
 	};
-
 	cr_offset = grif_fpga_feature_cr_base_on_port(lb_base_feat, lb_base_drv_data->port_number);
-	//dev_info(dev, "port_number = %d cr_offset = %d\n", lb_base_drv_data->port_number, cr_offset);
 
 	err = regmap_read(regmap, cr_offset, &data);
 	if(err) {
@@ -102,10 +91,10 @@ ssize_t show_lb_base(struct device *dev, struct device_attribute *attr,
 		return snprintf(buf, PAGE_SIZE, "Error reading LB_BASE feature control register\n");
 	};
 
-	return snprintf(buf, PAGE_SIZE, (data & ((unsigned)1 << shift))?"1\n":"0\n");*/
+	return snprintf(buf, PAGE_SIZE, (data & (unsigned)1)?"1\n":"0\n");
 };
 
-ssize_t store_lb_base(struct device *dev, struct device_attribute *attr,
+ssize_t store_lb_base_en(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t size)
 {
 	/*int err;
@@ -153,7 +142,21 @@ ssize_t store_lb_base(struct device *dev, struct device_attribute *attr,
 	return size;*/
 };
 
-static DEVICE_ATTR(lb_base_feat_to_sysfs, S_IRUGO|S_IWUSR, show_lb_base, store_lb_base);
+// Callbacks for Smart LB level
+ssize_t show_lb_base_lvl(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+
+};
+
+ssize_t store_lb_base_lvl(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+
+};
+
+static DEVICE_ATTR(lb_base_feat_to_sysfs_en, S_IRUGO|S_IWUSR, show_lb_base_en, store_lb_base_en);
+static DEVICE_ATTR(lb_base_feat_to_sysfs_lvl, S_IRUGO|S_IWUSR, show_lb_base_lvl, store_lb_base_lvl);
 
 //-----------------------------------------------------------------------------
 
@@ -226,23 +229,10 @@ static int lb_base_sysfs_probe(struct platform_device *pdev)
 
 	device_mask |= (1 << port_number);
 
-	add_attribute(lb_base_sysfs_device, LB_BASE_CR_LB_EN_NAME, &dev_attrib_lb_en,
-			show_lb_base, store_lb_base);
-	add_attribute(lb_base_sysfs_device, LB_BASE_CR_MAC_SWAP_EN_NAME,
-			&dev_attrib_mac_swap_en, show_lb_base, store_lb_base);
-	add_attribute(lb_base_sysfs_device, LB_BASE_CR_IP_SWAP_EN_NAME,
-			&dev_attrib_ip_swap_en, show_lb_base, store_lb_base);
-	add_attribute(lb_base_sysfs_device, LB_BASE_CR_TCP_UDP_SWAP_EN_NAME,
-			&dev_attrib_tcp_udp_swap_en, show_lb_base,
-			store_lb_base);
-	add_attribute(lb_base_sysfs_device, LB_BASE_CR_PASSTHROUGH_EN_NAME,
-			&dev_attrib_passthrough_en, show_lb_base,
-			store_lb_base);
-	add_attribute(lb_base_sysfs_device, LB_BASE_CR_PASSTHROUGH_MODE_NAME,
-			&dev_attrib_passthrough_mode, show_lb_base,
-			store_lb_base);
-	add_attribute(lb_base_sysfs_device, LB_BASE_CR_LB_L1_EN_NAME,
-			&dev_attrib_lb_l1_en, show_lb_base, store_lb_base);
+	add_attribute(lb_base_sysfs_device, LB_BASE_ENABLE_NAME, &dev_attrib_enable,
+			show_lb_base_en, store_lb_base_en);
+	add_attribute(lb_base_sysfs_device, LB_BASE_LEVEL_NAME,
+			&dev_attrib_level, show_lb_base_lvl, store_lb_base_lvl);
 
 	return 0;
 };
@@ -252,13 +242,8 @@ static int lb_base_sysfs_remove(struct platform_device *pdev)
 {
 	struct drv_data *lb_base_drv_data = dev_get_drvdata(&pdev->dev);
 
-	device_remove_file(&pdev->dev, &dev_attrib_lb_l1_en);
-	device_remove_file(&pdev->dev, &dev_attrib_passthrough_mode);
-	device_remove_file(&pdev->dev, &dev_attrib_passthrough_en);
-	device_remove_file(&pdev->dev, &dev_attrib_tcp_udp_swap_en);
-	device_remove_file(&pdev->dev, &dev_attrib_ip_swap_en);
-	device_remove_file(&pdev->dev, &dev_attrib_mac_swap_en);
-	device_remove_file(&pdev->dev, &dev_attrib_lb_en);
+	device_remove_file(&pdev->dev, &dev_attrib_enable);
+	device_remove_file(&pdev->dev, &dev_attrib_level);
 
 	device_destroy(cl, MKDEV(MAJOR_DEV_NUMBER, lb_base_drv_data->port_number));
 
@@ -331,7 +316,7 @@ void add_attribute(struct device *dev, const char *attrib_name,
 		dev_info(dev, "Error creating file %s\n", attrib.name);
 };
 
-unsigned get_shift_by_attrib_name(const char *attrib_name)
+/*unsigned get_shift_by_attrib_name(const char *attrib_name)
 {
 	if(!strcmp(attrib_name, LB_BASE_CR_LB_EN_NAME))
 		return LB_BASE_CR_LB_EN_BIT;
@@ -352,4 +337,4 @@ unsigned get_shift_by_attrib_name(const char *attrib_name)
 							return LB_BASE_CR_PASSTHROUGH_MODE_BIT;
 						else
 							return LB_BASE_CR_LB_L1_EN_BIT;
-};
+};*/
