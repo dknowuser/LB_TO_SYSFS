@@ -7,7 +7,6 @@
 #include <grif_fpga.h>
 
 #define MAJOR_DEV_NUMBER 		14
-#define FPGA_FEATURE_LB_BASE_CR 	85
 #define PARAMETER_LEN 			2
 
 #define LB_BASE_CR_LB_EN_BIT		0
@@ -51,6 +50,8 @@ static const struct of_device_id lb_base_sysfs_ids[] = {
 
 // Uncomment it to enable autoloading
 // MODULE_DEVICE_TABLE(of, lb_sysfs_ids);
+
+static uint32_t device_mask = 0;
 
 static const char *LB_BASE_CLASS_NAME			= "smart_lb";
 static const char *LB_BASE_DEVICE_NAME			= "lb_%d";
@@ -216,7 +217,6 @@ static int lb_base_sysfs_probe(struct platform_device *pdev)
 		return -EPERM;
 	};
 
-
 	sprintf(sysfs_dev_name, LB_BASE_DEVICE_NAME, port_number);
 	lb_base_sysfs_device = device_create(cl, NULL, MKDEV(MAJOR_DEV_NUMBER, port_number), lb_base_drv_data, sysfs_dev_name);
 	if(!lb_base_sysfs_device) {
@@ -224,10 +224,7 @@ static int lb_base_sysfs_probe(struct platform_device *pdev)
 		return -EPERM;
 	};
 
-	if(!port_number)
-		lb_base_sysfs_device_0 = lb_base_sysfs_device;
-	else
-		lb_base_sysfs_device_1 = lb_base_sysfs_device;
+	device_mask |= (1 << port_number);
 
 	add_attribute(lb_base_sysfs_device, LB_BASE_CR_LB_EN_NAME, &dev_attrib_lb_en,
 			show_lb_base, store_lb_base);
@@ -265,17 +262,9 @@ static int lb_base_sysfs_remove(struct platform_device *pdev)
 
 	device_destroy(cl, MKDEV(MAJOR_DEV_NUMBER, lb_base_drv_data->port_number));
 
-	// TODO: Find out another way to recognize Smart Loopback devices that not destroyed
-	if(!lb_base_drv_data->port_number) {
-		lb_base_sysfs_device_0 = NULL;
-		if(!lb_base_sysfs_device_1)
-			class_destroy(cl);
-	}
-	else {
-		lb_base_sysfs_device_1 = NULL;
-		if(!lb_base_sysfs_device_0)
-			class_destroy(cl);
-	};
+	device_mask &= ~(1 << lb_base_drv_data->port_number);
+	if(!device_mask)
+		class_destroy(cl);
 
 	dev_info(&pdev->dev, "Smart LB device has been removed\n");
 	return 0;
