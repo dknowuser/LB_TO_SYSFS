@@ -83,7 +83,7 @@ static struct device_attribute dev_attrib_lb_en, dev_attrib_mac_swap_en,
 ssize_t show_lb_base(struct device *dev, struct device_attribute *attr,
 		char *buf)
 {
-	int err;
+	/*int err;
 	unsigned data = 0;
 	uint16_t cr_offset;
 	unsigned shift = get_shift_by_attrib_name(attr->attr.name);
@@ -102,13 +102,13 @@ ssize_t show_lb_base(struct device *dev, struct device_attribute *attr,
 		return snprintf(buf, PAGE_SIZE, "Error reading LB_BASE feature control register\n");
 	};
 
-	return snprintf(buf, PAGE_SIZE, (data & ((unsigned)1 << shift))?"1\n":"0\n");
+	return snprintf(buf, PAGE_SIZE, (data & ((unsigned)1 << shift))?"1\n":"0\n");*/
 };
 
 ssize_t store_lb_base(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t size)
 {
-	int err;
+	/*int err;
 	unsigned data = 0;
 	uint16_t cr_offset;
 	unsigned shift = get_shift_by_attrib_name(attr->attr.name);
@@ -150,7 +150,7 @@ ssize_t store_lb_base(struct device *dev, struct device_attribute *attr,
 		return EIO;
 	};
 
-	return size;
+	return size;*/
 };
 
 static DEVICE_ATTR(lb_base_feat_to_sysfs, S_IRUGO|S_IWUSR, show_lb_base, store_lb_base);
