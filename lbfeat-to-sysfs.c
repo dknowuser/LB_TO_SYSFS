@@ -17,6 +17,11 @@
 #define LB_BASE_CR_PASSTHROUGH_MODE_BIT	LB_BASE_CR_PASSTHROUGH_EN_BIT + 1
 #define LB_BASE_CR_LB_L1_EN_BIT		LB_BASE_CR_PASSTHROUGH_MODE_BIT + 1
 
+#define L1 (1 << LB_BASE_CR_LB_EN_BIT)
+#define L2 L1 | (1 << LB_BASE_CR_MAC_SWAP_EN_BIT)
+#define L3 L2 | (1 << LB_BASE_CR_IP_SWAP_EN_BIT)
+#define L4 L3 | (1 << LB_BASE_CR_TCP_UDP_SWAP_EN_BIT)
+
 //-----------------------------------------------------------------------------
 // Struct declarations
 struct drv_data {
@@ -89,7 +94,7 @@ ssize_t show_lb_base_en(struct device *dev, struct device_attribute *attr,
 		return snprintf(buf, PAGE_SIZE, "Error reading LB_BASE feature control register\n");
 	};
 
-	return snprintf(buf, PAGE_SIZE, (data & (unsigned)1 << LB_BASE_CR_LB_EN_BIT)?"1\n":"0\n");
+	return snprintf(buf, PAGE_SIZE, (data & ((unsigned)1 << LB_BASE_CR_LB_EN_BIT))?"1\n":"0\n");
 };
 
 ssize_t store_lb_base_en(struct device *dev, struct device_attribute *attr,
@@ -144,7 +149,37 @@ ssize_t store_lb_base_en(struct device *dev, struct device_attribute *attr,
 ssize_t show_lb_base_lvl(struct device *dev, struct device_attribute *attr,
 		char *buf)
 {
+	int err;
+	uint16_t cr_offset;
+	unsigned data = 0;
+	struct drv_data *lb_base_drv_data = dev_get_drvdata(dev);
+	if(!lb_base_drv_data) {
+		dev_err(dev, "Unable to get driver data\n");
+		return snprintf(buf, PAGE_SIZE, "Unable to get driver data\n");
+	};
+	cr_offset = grif_fpga_feature_cr_base_on_port(lb_base_feat, lb_base_drv_data->port_number);
 
+	err = regmap_read(regmap, cr_offset, &data);
+	if(err) {
+		dev_err(dev, "Error reading LB_BASE feature control register\n");
+		return snprintf(buf, PAGE_SIZE, "Error reading LB_BASE feature control register\n");
+	};
+
+	if(!(data & ((unsigned)1 << LB_BASE_CR_LB_EN_BIT)))
+		return snprintf(buf, PAGE_SIZE, "0\n");
+
+	switch(data & 0xF) {
+	case L1:
+		return snprintf(buf, PAGE_SIZE, "1\n");
+	case L2:
+		return snprintf(buf, PAGE_SIZE, "2\n");
+	case L3:
+		return snprintf(buf, PAGE_SIZE, "3\n");
+	case L4:
+		return snprintf(buf, PAGE_SIZE, "4\n");
+	default:
+		return snprintf(buf, PAGE_SIZE, "Invalid LB_BASE feature control register value\n");
+	};
 };
 
 ssize_t store_lb_base_lvl(struct device *dev, struct device_attribute *attr,
