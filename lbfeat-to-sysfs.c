@@ -89,7 +89,7 @@ ssize_t show_lb_base_en(struct device *dev, struct device_attribute *attr,
 		return snprintf(buf, PAGE_SIZE, "Error reading LB_BASE feature control register\n");
 	};
 
-	return snprintf(buf, PAGE_SIZE, (data & (unsigned)1)?"1\n":"0\n");
+	return snprintf(buf, PAGE_SIZE, (data & (unsigned)1 << LB_BASE_CR_LB_EN_BIT)?"1\n":"0\n");
 };
 
 ssize_t store_lb_base_en(struct device *dev, struct device_attribute *attr,
@@ -123,10 +123,12 @@ ssize_t store_lb_base_en(struct device *dev, struct device_attribute *attr,
 	};
 
 	if(*buf == '1') {
-		data |= (unsigned)1;
+		data |= ((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
+		data |= ((unsigned)1 << LB_BASE_CR_LB_EN_BIT);
 	}
 	else {
-		data &= ~((unsigned)1);
+		data &= ~((unsigned)1 << LB_BASE_CR_LB_EN_BIT);
+		data &= ~((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
 	};
 
 	err = regmap_write(regmap, cr_offset, data);
