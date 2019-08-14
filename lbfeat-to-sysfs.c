@@ -61,8 +61,6 @@ static const char *LB_BASE_LEVEL_NAME	 		= "level";
 static struct regmap *regmap = NULL;
 static struct fpga_feature *lb_base_feat = NULL;
 
-static struct device *lb_base_sysfs_device_0 = NULL, *lb_base_sysfs_device_1 = NULL;
-
 static struct class *cl = NULL;
 static struct attribute attrib;
 static struct device_attribute dev_attrib_enable, dev_attrib_level;
@@ -97,10 +95,9 @@ ssize_t show_lb_base_en(struct device *dev, struct device_attribute *attr,
 ssize_t store_lb_base_en(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t size)
 {
-	/*int err;
-	unsigned data = 0;
+	int err;
 	uint16_t cr_offset;
-	unsigned shift = get_shift_by_attrib_name(attr->attr.name);
+	unsigned data = 0;
 	struct drv_data *lb_base_drv_data = dev_get_drvdata(dev);
 	if(!lb_base_drv_data) {
 		dev_err(dev, "Unable to get driver data\n");
@@ -118,7 +115,6 @@ ssize_t store_lb_base_en(struct device *dev, struct device_attribute *attr,
 	};
 
 	cr_offset = grif_fpga_feature_cr_base_on_port(lb_base_feat, lb_base_drv_data->port_number);
-	//dev_info(dev, "port_number = %d cr_offset = %d\n", lb_base_drv_data->port_number, cr_offset);
 
 	err = regmap_read(regmap, cr_offset, &data);
 	if(err) {
@@ -127,10 +123,10 @@ ssize_t store_lb_base_en(struct device *dev, struct device_attribute *attr,
 	};
 
 	if(*buf == '1') {
-		data |= ((unsigned)1 << shift);
+		data |= (unsigned)1;
 	}
 	else {
-		data &= ~((unsigned)1 << shift);
+		data &= ~((unsigned)1);
 	};
 
 	err = regmap_write(regmap, cr_offset, data);
@@ -139,7 +135,7 @@ ssize_t store_lb_base_en(struct device *dev, struct device_attribute *attr,
 		return EIO;
 	};
 
-	return size;*/
+	return size;
 };
 
 // Callbacks for Smart LB level
