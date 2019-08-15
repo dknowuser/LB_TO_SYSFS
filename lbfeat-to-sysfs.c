@@ -64,8 +64,25 @@ static struct regmap *regmap = NULL;
 static struct fpga_feature *lb_base_feat = NULL;
 
 static struct class *cl = NULL;
-static struct attribute attrib;
-static struct device_attribute dev_attrib_enable, dev_attrib_level;
+static struct attribute attrib = {
+	.name = NULL,
+	.mode = NULL,
+};
+static struct device_attribute dev_attrib_enable = {
+	.attr = {
+		.name = NULL,
+		.mode = NULL,
+	},
+	.show = NULL,
+	.store = NULL,
+}, dev_attrib_level = {
+	.attr = {
+		.name = NULL,
+		.mode = NULL,
+	},
+	.show = NULL,
+	.store = NULL,
+};
 
 //-----------------------------------------------------------------------------
 // Callback section
@@ -383,11 +400,13 @@ void add_attribute(struct device *dev, const char *attrib_name,
 		size_t count))
 {
 	int err;
-	attrib.mode = S_IRUGO | S_IWUGO;
-	attrib.name = attrib_name;
-	dev_attrib->attr = attrib;
-	dev_attrib->show = show;
-	dev_attrib->store = store;
+	if(!dev_attrib->show) {
+		attrib.mode = S_IRUGO | S_IWUGO;
+		attrib.name = attrib_name;
+		dev_attrib->attr = attrib;
+		dev_attrib->show = show;
+		dev_attrib->store = store;
+	};
 	err = device_create_file(dev, dev_attrib);
 	if(err < 0)
 		dev_info(dev, "Error creating file %s\n", attrib.name);
