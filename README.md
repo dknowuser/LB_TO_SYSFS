@@ -2,7 +2,7 @@ Smart LB to sysfs module
 =============================================
 The module allows users to manage LB_BASE FPGA feature via sysfs entries.  
 It creates 'smart_lb' directory in /sys/class/ where devices 'lb_X' are placed.  
-Instead of X a number is given to each device accordingly to it's port.  
+Instead of X a number is given to each device accordingly to its port.  
 
 Each 'lb_X' directory contains 'enable' and 'level' files.  
 'enable' allows users to enable LB_BASE FPGA feature globally.  
