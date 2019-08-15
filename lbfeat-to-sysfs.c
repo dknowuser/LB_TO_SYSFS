@@ -17,9 +17,8 @@
 #define LB_BASE_CR_PASSTHROUGH_MODE_BIT	LB_BASE_CR_PASSTHROUGH_EN_BIT + 1
 #define LB_BASE_CR_LB_L1_EN_BIT		LB_BASE_CR_PASSTHROUGH_MODE_BIT + 1
 
-//#define L1 (1 << LB_BASE_CR_LB_L1_EN_BIT)
 #define L0 0
-#define L2 /*L1 |*/ (1 << LB_BASE_CR_MAC_SWAP_EN_BIT)
+#define L2 L0 | (1 << LB_BASE_CR_MAC_SWAP_EN_BIT)
 #define L3 L2 | (1 << LB_BASE_CR_IP_SWAP_EN_BIT)
 #define L4 L3 | (1 << LB_BASE_CR_TCP_UDP_SWAP_EN_BIT)
 
@@ -41,9 +40,6 @@ void add_attribute(struct device *dev, const char *attrib_name,
 		ssize_t (*store)(struct device *dev,
 		struct device_attribute *attr, const char *buf,
 		size_t count));
-
-// Function for getting bit shift by sysfs attribute name
-//unsigned get_shift_by_attrib_name(const char *attrib_name);
 
 //-----------------------------------------------------------------------------
 // Global variables section
@@ -129,12 +125,10 @@ ssize_t store_lb_base_en(struct device *dev, struct device_attribute *attr,
 	};
 
 	if(*buf == '1') {
-		//data |= ((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
 		data |= ((unsigned)1 << LB_BASE_CR_LB_EN_BIT);
 	}
 	else {
 		data &= ~((unsigned)1 << LB_BASE_CR_LB_EN_BIT);
-		//data &= ~((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
 	};
 
 	err = regmap_write(regmap, cr_offset, data);
@@ -169,8 +163,6 @@ ssize_t show_lb_base_lvl(struct device *dev, struct device_attribute *attr,
 	switch(data & 0xE) {
 	case L0:
 		return snprintf(buf, PAGE_SIZE, "0\n");
-	/*case L1:
-		return snprintf(buf, PAGE_SIZE, "1\n");*/
 	case L2:
 		return snprintf(buf, PAGE_SIZE, "2\n");
 	case L3:
@@ -199,7 +191,7 @@ ssize_t store_lb_base_lvl(struct device *dev, struct device_attribute *attr,
 		return EINVAL;
 	};
 
-	if((*buf != '0') && /*(*buf != '1') && */(*buf != '2') && (*buf != '3') && (*buf != '4')) {
+	if((*buf != '0') && (*buf != '2') && (*buf != '3') && (*buf != '4')) {
 		dev_info(dev, "Invalid input parameter value (should be equal '0', '2'..'4')\n");
 		return EINVAL;
 	};
@@ -216,25 +208,18 @@ ssize_t store_lb_base_lvl(struct device *dev, struct device_attribute *attr,
 
 	switch(*buf) {
 	case '0':
-		//data &= ~((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
 		break;
-	/*case '1':
-		data |= ((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
-		break;*/
 	case '2':
 		data |= ((unsigned)1 << LB_BASE_CR_MAC_SWAP_EN_BIT);
-		//data |= ((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
 		break;
 	case '3':
 		data |= ((unsigned)1 << LB_BASE_CR_MAC_SWAP_EN_BIT);
 		data |= ((unsigned)1 << LB_BASE_CR_IP_SWAP_EN_BIT);
-		//data |= ((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
 		break;
 	case '4':
 		data |= ((unsigned)1 << LB_BASE_CR_MAC_SWAP_EN_BIT);
 		data |= ((unsigned)1 << LB_BASE_CR_IP_SWAP_EN_BIT);
 		data |= ((unsigned)1 << LB_BASE_CR_TCP_UDP_SWAP_EN_BIT);
-		//data |= ((unsigned)1 << LB_BASE_CR_LB_L1_EN_BIT);
 		break;
 	};
 
@@ -382,7 +367,7 @@ module_init(lb_base_sysfs_init);
 module_exit(lb_base_sysfs_exit);
 
 MODULE_LICENSE("Dual BSD/GPL");
-//MODULE_AUTHOR("Marchuk Liliya");
+MODULE_AUTHOR("Marchuk Liliya");
 MODULE_DESCRIPTION("Module for exporting Smart Loopback management in sysfs");
 
 //-----------------------------------------------------------------------------
@@ -408,25 +393,3 @@ void add_attribute(struct device *dev, const char *attrib_name,
 		dev_info(dev, "Error creating file %s\n", attrib.name);
 };
 
-/*unsigned get_shift_by_attrib_name(const char *attrib_name)
-{
-	if(!strcmp(attrib_name, LB_BASE_CR_LB_EN_NAME))
-		return LB_BASE_CR_LB_EN_BIT;
-	else
-		if(!strcmp(attrib_name, LB_BASE_CR_MAC_SWAP_EN_NAME))
-			return LB_BASE_CR_MAC_SWAP_EN_BIT;
-		else
-			if(!strcmp(attrib_name, LB_BASE_CR_IP_SWAP_EN_NAME))
-				return LB_BASE_CR_IP_SWAP_EN_BIT;
-			else
-				if(!strcmp(attrib_name, LB_BASE_CR_TCP_UDP_SWAP_EN_NAME))
-					return LB_BASE_CR_TCP_UDP_SWAP_EN_BIT;
-				else
-					if(!strcmp(attrib_name, LB_BASE_CR_PASSTHROUGH_EN_NAME))
-						return LB_BASE_CR_PASSTHROUGH_EN_BIT;
-					else
-						if(!strcmp(attrib_name, LB_BASE_CR_PASSTHROUGH_MODE_NAME))
-							return LB_BASE_CR_PASSTHROUGH_MODE_BIT;
-						else
-							return LB_BASE_CR_LB_L1_EN_BIT;
-};*/
