@@ -27,7 +27,7 @@ obj-y += lbfeat-to-sysfs/
 
 Device Tree bindings  
 ===============================================
-The module requires lbfeat-to-sysfs subnode placed in /dts-v1/ node.  
+The module requires lbfeat-to-sysfs subnode placed in / node.  
 lbfeat-to-sysfs subnode fields are:  
   * compatible = "stcmtk,lbfeat-to-sysfs"
   * target-fpga = <&fpga0>
